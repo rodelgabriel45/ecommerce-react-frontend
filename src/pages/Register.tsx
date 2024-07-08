@@ -1,8 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
-import { loginFormSchema } from '@/utils/validation';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -11,20 +7,16 @@ import {
   FormLabel,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useLoginMutation } from '@/features/api/auth';
-import { useAppDispatch, useAppSelector } from '@/features/hooks';
-import { loginSuccess } from '@/features/userSlice/userSlice';
+import { useRegisterMutation } from '@/features/api/auth';
+import { registerFormSchema } from '@/utils/validation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
-import { User } from '@/types/types';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { z } from 'zod';
 
-type LoginFormSchema = z.infer<typeof loginFormSchema>;
-
-interface LoginResponse {
-  token: string;
-  user: User;
-}
+type RegisterFormSchema = z.infer<typeof registerFormSchema>;
 
 type DataError = {
   data: {
@@ -34,59 +26,48 @@ type DataError = {
   };
 };
 
-const Login = () => {
-  const [login, { isLoading, error }] = useLoginMutation();
-  const dispatch = useAppDispatch();
-  const { user: authUser } = useAppSelector((state) => state.user);
-  const form = useForm<LoginFormSchema>({
-    resolver: zodResolver(loginFormSchema),
+const Register = () => {
+  const [register, { isLoading, error }] = useRegisterMutation();
+  const form = useForm<RegisterFormSchema>({
+    resolver: zodResolver(registerFormSchema),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
     },
   });
 
-  const onSubmit = async (formData: LoginFormSchema) => {
-    try {
-      const result = await login(formData);
-
-      if (result.error) {
-        console.error('Failed to login:', result.error);
-        return; // Handle error appropriately
-      }
-
-      if ('data' in result && 'token' in result.data && 'user' in result.data) {
-        // Extract token and user from the data
-        const { token, user } = result.data as LoginResponse;
-
-        // Save token to localStorage
-        localStorage.setItem('authToken', token);
-
-        // Dispatch loginSuccess to update Redux state with user data
-        dispatch(loginSuccess(user));
-
-        // Optionally navigate to another page or update UI
-      } else {
-        console.error('Invalid response format from login API');
-      }
-    } catch (error) {
-      console.log(error);
+  const onSubmit = async (formData: RegisterFormSchema) => {
+    const result = await register(formData);
+    if (result.error) {
+      return;
     }
-  };
 
-  if (authUser) {
-    return (
-      <div>
-        <h2 className='font-medium'>{authUser.name}</h2>
-        <p>@{authUser.email}</p>
-      </div>
-    );
-  }
+    form.reset();
+    toast.success('Account created successfully');
+  };
 
   return (
     <div className='max-w-2xl mx-auto flex flex-col mt-20'>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+          <FormField
+            control={form.control}
+            name='name'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder='Enter Full Name...'
+                    {...field}
+                    className='text-lg p-4'
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name='email'
@@ -136,8 +117,8 @@ const Login = () => {
                 'Submit'
               )}
             </Button>
-            <Link to='/register' className='text-blue-500 hover:underline'>
-              {"Don't"} have an account?
+            <Link to='/login' className='text-blue-500 hover:underline'>
+              Already have an account?
             </Link>
           </div>
         </form>
@@ -146,4 +127,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
